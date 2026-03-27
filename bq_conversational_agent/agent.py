@@ -4,10 +4,19 @@ from google.adk.agents.llm_agent import Agent
 from vertexai import agent_engines
 import vertexai
 import google.cloud.geminidataanalytics as geminidataanalytics
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize Vertex AI
-project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "primary-394719")
+project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
 location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+dataset_id = os.environ.get("BQ_DATASET_ID", "financial_services_mock")
+
+if not project_id:
+    raise ValueError("GOOGLE_CLOUD_PROJECT environment variable is not set. Please check your .env file.")
+
 vertexai.init(project=project_id, location=location)
 
 def ask_conversational_analytics(query: str) -> str:
@@ -31,7 +40,7 @@ def ask_conversational_analytics(query: str) -> str:
     for table in tables:
         bq_ref = geminidataanalytics.BigQueryTableReference()
         bq_ref.project_id = project_id
-        bq_ref.dataset_id = "financial_services_mock"
+        bq_ref.dataset_id = dataset_id
         bq_ref.table_id = table
         table_refs.append(bq_ref)
         

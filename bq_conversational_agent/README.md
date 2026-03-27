@@ -42,7 +42,14 @@ The service account or user account running this code must have the following IA
     pip install -r requirements.txt
     ```
 
-3.  **Authenticate with Google Cloud:**
+3.  **Set up Environment Variables:**
+    The project relies on an `.env` file to configure GCP settings. Copy the example file and update it with your specific project details:
+    ```bash
+    cp .env.example .env
+    ```
+    Open `.env` and fill in your `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `BQ_DATASET_ID`, and `STAGING_BUCKET`.
+
+4.  **Authenticate with Google Cloud:**
     Ensure you are authenticated with an account that has the required IAM permissions.
     ```bash
     gcloud auth application-default login

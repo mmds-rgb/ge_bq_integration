@@ -2,12 +2,20 @@ import os
 import random
 from datetime import datetime, timedelta
 from google.cloud import bigquery
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 def create_mock_data():
-    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "primary-394719")
+    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
+    if not project_id:
+        raise ValueError("GOOGLE_CLOUD_PROJECT environment variable is not set. Please check your .env file.")
+        
     client = bigquery.Client(project=project_id)
     
-    dataset_id = f"{project_id}.financial_services_mock"
+    dataset_name = os.environ.get("BQ_DATASET_ID", "financial_services_mock")
+    dataset_id = f"{project_id}.{dataset_name}"
     dataset = bigquery.Dataset(dataset_id)
     dataset.location = "US"
     

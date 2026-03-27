@@ -1,6 +1,10 @@
 import os
 import vertexai
 from google.protobuf import json_format
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Monkeypatch json_format.Parse to ignore unknown fields
 original_parse = json_format.Parse
@@ -9,10 +13,13 @@ def patched_parse(text, message, ignore_unknown_fields=False, descriptor_pool=No
 json_format.Parse = patched_parse
 
 def deploy():
-    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "primary-394719")
-    location = "us-central1" # Reasoning Engine resource location
+    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
+    if not project_id:
+        raise ValueError("GOOGLE_CLOUD_PROJECT environment variable is not set. Please check your .env file.")
+        
+    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
     
-    staging_bucket = f"gs://{project_id}-insurance-agent-assets"
+    staging_bucket = os.environ.get("STAGING_BUCKET", f"gs://{project_id}-insurance-agent-assets")
     
     # Import app first so its global init doesn't override our deployment init
     from agent import app

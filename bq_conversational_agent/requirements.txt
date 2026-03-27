@@ -6,3 +6,4 @@ cloudpickle
 uvicorn
 fastapi
 google-cloud-geminidataanalytics
+python-dotenv
