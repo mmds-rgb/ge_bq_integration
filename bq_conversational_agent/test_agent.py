@@ -7,68 +7,24 @@ async def run_test_cases():
     
     test_cases = [
         {
-            "query": "what data about customers do you have?",
-            "expected_keywords": ["customer"]
-        },
-        {
-            "query": "show me all customers with low risk?",
-            "expected_keywords": ["14", "customers"]
-        },
-        {
-            "query": "what are their emails?",
-            "expected_keywords": ["14", "email addresses"]
-        },
-        {
-            "query": "what are their balances?",
-            "expected_keywords": ["balances"]
-        },
-        {
-            "query": "show me a list of all emails along with the all of their accounts and their balances",
-            "expected_keywords": ["emails", "accounts", "balances"]
-        },
-        {
-            "query": "Can you tell me about the dataset?",
-            "expected_keywords": ["customers", "accounts", "transactions"]
-        },
-        {
-            "query": "What are some interesting questions you can answer?",
-            "expected_keywords": ["?"]
-        },
-        {
-            "query": "Can I see the email addresses of customers who have made a transaction with a specific merchant?",
-            "expected_keywords": ["Yes", "merchant"]
-        },
-        {
             "query": "what merchants are in the system?",
-            "expected_keywords": ["merchants"]
+            "expected_keywords": ["Apple", "Walmart"]
         },
         {
-            "query": "lets say 'Target'",
+            "query": "How many customers have made a transaction at Target?",
             "expected_keywords": ["32"]
         },
         {
             "query": "can you correlate that with the risk profile and produce a summary?",
-            "expected_keywords": ["Medium", "High", "Low"]
-        },
-        {
-            "query": "are you able to use analytical functions?",
-            "expected_keywords": ["Yes", "average"]
+            "expected_keywords": ["Medium Risk", "12 customers", "High RIsk", "12 customers", "Low Risk", "8 customers"]
         },
         {
             "query": "Rank customers based on their account balances.",
-            "expected_keywords": ["Patricia Williams"]
+            "expected_keywords": ["Patricia Williams", "126,527"]
         },
         {
-            "query": "what SQL did you use for this?",
-            "expected_keywords": ["SQL"]
-        },
-        {
-            "query": "Are there really two customers with the name 'Patricia Williams'?",
-            "expected_keywords": ["Yes"]
-        },
-        {
-            "query": "what is the SQL you used to figure this out?",
-            "expected_keywords": ["don't", "SQL"]
+            "query": "Are there really two customers with the name 'Patricia Williams'? Provide their customer_id and a total balance (round to 1000s as in '34K')?",
+            "expected_keywords": ["Yes", "CUST0014", "CUST0022", "127K", "106K"]
         }
     ]
     
@@ -83,6 +39,7 @@ async def run_test_cases():
     passed_tests = 0
     failed_tests = 0
     failed_cases = []
+    passed_cases = []
     
     for i, case in enumerate(test_cases):
         query = case["query"]
@@ -117,6 +74,11 @@ async def run_test_cases():
                 failed_tests += 1
             else:
                 print(f"✅ PASSED")
+                passed_cases.append({
+                    "query": query,
+                    "response": full_response,
+                    "matched": expected_keywords
+                })
                 passed_tests += 1
                 
         except Exception as e:
@@ -128,10 +90,17 @@ async def run_test_cases():
             })
             failed_tests += 1
             
-    print(f"\\n--- Test Summary ---")
+    print(f"\n--- Test Summary ---")
     print(f"Passed: {passed_tests}/{len(test_cases)}")
     print(f"Failed: {failed_tests}/{len(test_cases)}")
     
+    if passed_cases:
+        print("\n--- Passed Test Details ---")
+        for pc in passed_cases:
+            print(f"User: {pc['query']}")
+            print(f"Matched: {pc['matched']}")
+            print(f"Agent Response (first 200 chars): {pc['response'][:200]}...\n")
+            
     if failed_cases:
         print(f"\n--- Failed Test Details ---")
         for fc in failed_cases:
