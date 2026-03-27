@@ -82,6 +82,7 @@ async def run_test_cases():
     
     passed_tests = 0
     failed_tests = 0
+    failed_cases = []
     
     for i, case in enumerate(test_cases):
         query = case["query"]
@@ -108,6 +109,11 @@ async def run_test_cases():
             
             if missing_keywords:
                 print(f"❌ FAILED: Missing expected keywords: {missing_keywords}")
+                failed_cases.append({
+                    "query": query,
+                    "response": full_response,
+                    "missing": missing_keywords
+                })
                 failed_tests += 1
             else:
                 print(f"✅ PASSED")
@@ -115,12 +121,24 @@ async def run_test_cases():
                 
         except Exception as e:
             print(f"❌ ERROR: {e}")
+            failed_cases.append({
+                "query": query,
+                "response": f"Error: {e}",
+                "missing": expected_keywords
+            })
             failed_tests += 1
             
     print(f"\\n--- Test Summary ---")
     print(f"Passed: {passed_tests}/{len(test_cases)}")
     print(f"Failed: {failed_tests}/{len(test_cases)}")
     
+    if failed_cases:
+        print(f"\n--- Failed Test Details ---")
+        for fc in failed_cases:
+            print(f"User: {fc['query']}")
+            print(f"Missing: {fc['missing']}")
+            print(f"Agent Response (first 200 chars): {fc['response'][:200]}...\n")
+            
     if failed_tests > 0:
         exit(1)
 
