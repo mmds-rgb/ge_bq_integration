@@ -1,122 +1,84 @@
 import os
 from typing import Dict, Any, List
 from google.adk.agents.llm_agent import Agent
-from google.cloud import bigquery
 from vertexai import agent_engines
 import vertexai
+import google.cloud.geminidataanalytics as geminidataanalytics
 
 # Initialize Vertex AI
 project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "primary-394719")
 location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
 vertexai.init(project=project_id, location=location)
 
-def execute_bigquery_sql(query: str) -> str:
+def ask_conversational_analytics(query: str) -> str:
     """
-    Executes a BigQuery SQL query and returns the results as a string.
+    Asks a standalone question about the financial data using the Conversational Analytics API.
     
     Args:
-        query: The SQL query to execute. MUST be a SELECT statement.
+        query: The natural language question to ask. MUST be a standalone question with all necessary context.
         
     Returns:
-        A string representation of the query results or an error message.
+        The answer from the Conversational Analytics API.
     """
-    print(f"DEBUG: execute_bigquery_sql called with query='{query}'")
+    print(f"DEBUG: ask_conversational_analytics called with query='{query}'")
     
-    # Security check: Block DML/DDL
-    forbidden_keywords = ["INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "TRUNCATE", "MERGE", "GRANT", "REVOKE"]
-    query_upper = query.upper()
-    for keyword in forbidden_keywords:
-        import re
-        if re.search(r'\b' + keyword + r'\b', query_upper):
-            return f"Error: The query contains a forbidden keyword '{keyword}'. Only SELECT queries are allowed."
-            
+    client = geminidataanalytics.DataChatServiceClient()
+    inline_context = geminidataanalytics.Context()
+    
+    # Connect to BigQuery tables
+    tables = ["customers", "accounts", "transactions"]
+    table_refs = []
+    for table in tables:
+        bq_ref = geminidataanalytics.BigQueryTableReference()
+        bq_ref.project_id = project_id
+        bq_ref.dataset_id = "financial_services_mock"
+        bq_ref.table_id = table
+        table_refs.append(bq_ref)
+        
+    datasource_references = geminidataanalytics.DatasourceReferences()
+    datasource_references.bq.table_references = table_refs
+    inline_context.datasource_references = datasource_references
+    
+    message = geminidataanalytics.Message()
+    message.user_message.text = query
+    
+    request = geminidataanalytics.ChatRequest(
+        parent=f"projects/{project_id}/locations/{location}",
+        messages=[message],
+        inline_context=inline_context
+    )
+    
     try:
-        project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "primary-394719")
-        client = bigquery.Client(project=project_id)
+        stream = client.chat(request=request)
+        final_answer = ""
+        for response in stream:
+            if response.system_message and response.system_message.text:
+                if response.system_message.text.text_type == geminidataanalytics.TextMessage.TextType.FINAL_RESPONSE:
+                    for part in response.system_message.text.parts:
+                        final_answer += part + "\n"
         
-        # Enforce a LIMIT if not present to prevent massive data transfers
-        if "LIMIT" not in query_upper:
-            query = query + " LIMIT 100"
+        if not final_answer:
+            return "The API did not return a final text response. It might have returned a chart or data table."
             
-        query_job = client.query(query)
-        results = query_job.result()
-        
-        rows = [dict(row) for row in results]
-        
-        if not rows:
-            return "Query executed successfully. No results found."
-            
-        import json
-        # Convert datetime/date objects to string for JSON serialization
-        def default_serializer(obj):
-            from datetime import date, datetime
-            if isinstance(obj, (datetime, date)):
-                return obj.isoformat()
-            raise TypeError(f"Type {type(obj)} not serializable")
-            
-        return json.dumps(rows, default=default_serializer, indent=2)
-        
+        return final_answer.strip()
     except Exception as e:
-        return f"Error executing query: {str(e)}"
-
-# Define the schema context for the LLM
-schema_context = f"""
-You have access to a BigQuery dataset named `financial_services_mock`.
-The dataset contains the following tables:
-
-1. `customers`
-   - `customer_id` (STRING): Unique identifier for the customer.
-   - `first_name` (STRING): Customer's first name.
-   - `last_name` (STRING): Customer's last name.
-   - `email` (STRING): Customer's email address.
-   - `phone` (STRING): Customer's phone number.
-   - `address` (STRING): Customer's address.
-   - `join_date` (DATE): Date the customer joined.
-   - `risk_profile` (STRING): Risk profile (Low, Medium, High).
-
-2. `accounts`
-   - `account_id` (STRING): Unique identifier for the account.
-   - `customer_id` (STRING): Foreign key to the `customers` table.
-   - `account_type` (STRING): Type of account (Checking, Savings, Credit, Investment).
-   - `balance` (FLOAT): Current balance of the account.
-   - `open_date` (DATE): Date the account was opened.
-   - `status` (STRING): Account status (Active, Closed, Suspended).
-
-3. `transactions`
-   - `transaction_id` (STRING): Unique identifier for the transaction.
-   - `account_id` (STRING): Foreign key to the `accounts` table.
-   - `transaction_date` (TIMESTAMP): Date and time of the transaction.
-   - `amount` (FLOAT): Transaction amount (positive for deposits, negative for withdrawals/payments).
-   - `transaction_type` (STRING): Type of transaction (Deposit, Withdrawal, Transfer, Payment).
-   - `merchant_name` (STRING): Name of the merchant (if applicable).
-   - `category` (STRING): Transaction category (e.g., Groceries, Entertainment).
-   - `status` (STRING): Transaction status (Completed, Pending, Failed).
-
-Use the `execute_bigquery_sql` tool to query these tables to answer user questions.
-Always use fully qualified table names in your queries: `{project_id}.financial_services_mock.table_name`.
-For example: `SELECT * FROM {project_id}.financial_services_mock.customers LIMIT 10`
-"""
+        return f"Error from Conversational Analytics API: {str(e)}"
 
 root_agent = Agent(
     model='gemini-2.5-flash',
     name='bq_conversational_agent',
-    instruction=f"""
+    instruction="""
     You are an expert Financial Data Analyst. Your goal is to answer questions about the company's financial data.
     
-    {schema_context}
+    You have access to a BigQuery dataset named `financial_services_mock` containing `customers`, `accounts`, and `transactions` tables.
     
     **Workflow:**
-    1. Analyze the user's question.
-    2. Formulate a BigQuery SQL `SELECT` query to retrieve the necessary data.
-    3. Use the `execute_bigquery_sql` tool to run the query.
-    4. Interpret the results and provide a clear, concise, and helpful answer to the user.
-    
-    **Rules:**
-    - Only use `SELECT` statements. Do not attempt to modify the data.
-    - Always explain your findings based on the data retrieved.
-    - If a query fails, analyze the error message, correct the SQL, and try again.
+    1. Analyze the user's question and the conversation history.
+    2. If the user's question relies on previous context (e.g., "what are their emails?"), formulate a standalone question that includes all necessary context (e.g., "What are the emails of customers with a Low risk profile?").
+    3. Use the `ask_conversational_analytics` tool to query the data using your standalone natural language question. Do NOT write SQL yourself.
+    4. Interpret the results from the tool and provide a clear, concise, and helpful answer to the user.
     """,
-    tools=[execute_bigquery_sql],
+    tools=[ask_conversational_analytics],
 )
 
 app = agent_engines.AdkApp(
