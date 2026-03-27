@@ -105,3 +105,10 @@ python deploy.py
 ```
 
 The script will initialize Vertex AI, package the `agent.py` code along with the requirements listed in the script, and create a new Reasoning Engine instance. This process may take a few minutes. Once complete, it will output the Reasoning Engine resource ID.
+
+## Registering with Gemini Enterprise
+
+Once your agent is successfully deployed to Vertex AI Reasoning Engine, you can register it with Gemini Enterprise to make it available to users within your organization's Gemini interface.
+
+Follow the official Google Cloud documentation to register and manage your ADK agent:
+[Register and Manage an ADK Agent in Gemini Enterprise](https://docs.cloud.google.com/gemini/enterprise/docs/register-and-manage-an-adk-agent)
