@@ -34,7 +34,8 @@ def ask_conversational_analytics(query: str) -> str:
     client = geminidataanalytics.DataChatServiceClient()
     inline_context = geminidataanalytics.Context()
     
-    # Connect to BigQuery tables
+    # Connect to BigQuery tables. You may want to add some code to make this
+    # more dynamic, e.g. by querying the BigQuery API to get the list of tables.
     tables = ["customers", "accounts", "transactions"]
     table_refs = []
     for table in tables:
