@@ -17,19 +17,31 @@ async def run_test_cases():
         },
         {
             "query": "How many customers have made a transaction at Target?",
-            "expected_keywords": ["32"]
+            "expected_keywords": ["41"]
         },
         {
-            "query": "can you correlate that with the risk profile and produce a summary?",
-            "expected_keywords": ["Medium", "12 customers", "High", "12 customers", "Low", "8 customers"]
+            "query": "can you correlate that with the risk profile and produce a counts summary grouped by risk profile?",
+            "expected_keywords": ["Low", "18", "Medium", "25", "High", "23"]
         },
         {
-            "query": "Rank customers based on their account balances.",
-            "expected_keywords": ["Patricia Williams", "126,527"]
+            "query": "List the names and balances of the top 3 customers by account balance. You must explicitly list all 3 names and their balances in your text response, ensure you round to the nearest thousand in 36K format.",
+            "expected_keywords": ["Patricia Williams", "184K", "Mary Rodriguez", "184K", "Jennifer Miller", "164K"]
         },
         {
-            "query": "Are there really two customers with the name 'Patricia Williams'? Provide their customer_id and a total balance (round to 1000s as in '34K')?",
-            "expected_keywords": ["Yes", "CUST0014", "CUST0022", "K"]
+            "query": "Are there really two customers with the name 'Patricia Williams'? Provide their customer_id and a total balance (round to 1000s as in '34K') explicitly in your text response.",
+            "expected_keywords": ["Yes", "CUST0014", "CUST0022", "184K"]
+        },
+        {
+            "query": "Find the customer_ids of customers who have an active loan and whose total account balance is below $10,000.",
+            "expected_keywords": ["CUST0011"]
+        },
+        {
+            "query": "Calculate the total net worth (Sum of Account Balances + Investment Portfolio Value - Loan Amount) for customer CUST0001. Round to the nearest thousand and express in K format (e.g. 70K).",
+            "expected_keywords": ["CUST0001", "70K"]
+        },
+        {
+            "query": "What is the average resolution time (in hours) for support tickets opened by customers with a 'High' risk profile? Round to one decimal place as in 36.1.",
+            "expected_keywords": ["High", "36.1"]
         }
     ]
     

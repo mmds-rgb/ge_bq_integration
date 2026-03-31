@@ -84,12 +84,65 @@ def create_mock_data():
         print(f"Table transactions might exist: {e}")
         table_transactions = client.get_table(table_transactions_id)
 
+    # 4. Create Loans Table
+    schema_loans = [
+        bigquery.SchemaField("loan_id", "STRING", mode="REQUIRED"),
+        bigquery.SchemaField("customer_id", "STRING", mode="REQUIRED"),
+        bigquery.SchemaField("loan_amount", "FLOAT", mode="REQUIRED"),
+        bigquery.SchemaField("interest_rate", "FLOAT", mode="REQUIRED"),
+        bigquery.SchemaField("status", "STRING", mode="REQUIRED", description="Active, Completed, Defaulted"),
+    ]
+    table_loans_id = f"{dataset_id}.loans"
+    table_loans = bigquery.Table(table_loans_id, schema=schema_loans)
+    try:
+        table_loans = client.create_table(table_loans)
+        print(f"Created table {table_loans.table_id}")
+    except Exception as e:
+        print(f"Table loans might exist: {e}")
+        table_loans = client.get_table(table_loans_id)
+
+    # 5. Create Support Tickets Table
+    schema_support_tickets = [
+        bigquery.SchemaField("ticket_id", "STRING", mode="REQUIRED"),
+        bigquery.SchemaField("customer_id", "STRING", mode="REQUIRED"),
+        bigquery.SchemaField("category", "STRING", mode="REQUIRED", description="Billing, Technical, Account, General"),
+        bigquery.SchemaField("status", "STRING", mode="REQUIRED", description="Open, Resolved, Closed"),
+        bigquery.SchemaField("resolution_time_hours", "FLOAT", mode="NULLABLE"),
+    ]
+    table_support_tickets_id = f"{dataset_id}.support_tickets"
+    table_support_tickets = bigquery.Table(table_support_tickets_id, schema=schema_support_tickets)
+    try:
+        table_support_tickets = client.create_table(table_support_tickets)
+        print(f"Created table {table_support_tickets.table_id}")
+    except Exception as e:
+        print(f"Table support_tickets might exist: {e}")
+        table_support_tickets = client.get_table(table_support_tickets_id)
+
+    # 6. Create Portfolios Table
+    schema_portfolios = [
+        bigquery.SchemaField("portfolio_id", "STRING", mode="REQUIRED"),
+        bigquery.SchemaField("customer_id", "STRING", mode="REQUIRED"),
+        bigquery.SchemaField("asset_type", "STRING", mode="REQUIRED", description="Stocks, Bonds, Real Estate, Crypto"),
+        bigquery.SchemaField("value", "FLOAT", mode="REQUIRED"),
+    ]
+    table_portfolios_id = f"{dataset_id}.portfolios"
+    table_portfolios = bigquery.Table(table_portfolios_id, schema=schema_portfolios)
+    try:
+        table_portfolios = client.create_table(table_portfolios)
+        print(f"Created table {table_portfolios.table_id}")
+    except Exception as e:
+        print(f"Table portfolios might exist: {e}")
+        table_portfolios = client.get_table(table_portfolios_id)
+
     print("Generating mock data...")
     
     # Generate Mock Data
     customers_to_insert = []
     accounts_to_insert = []
     transactions_to_insert = []
+    loans_to_insert = []
+    support_tickets_to_insert = []
+    portfolios_to_insert = []
     
     first_names = ["James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda", "William", "Elizabeth"]
     last_names = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez"]
@@ -147,6 +200,34 @@ def create_mock_data():
                     "category": random.choice(categories) if tx_type in ["Withdrawal", "Payment"] else "Income/Transfer",
                     "status": "Completed"
                 })
+                
+        # --- NEW DATA GENERATION PER CUSTOMER ---
+        num_loans = random.randint(0, 2)
+        for l in range(num_loans):
+            loans_to_insert.append({
+                "loan_id": f"LOAN{i:04d}{l:02d}",
+                "customer_id": customer_id,
+                "loan_amount": round(random.uniform(5000.0, 100000.0), 2),
+                "interest_rate": round(random.uniform(3.0, 15.0), 2),
+                "status": random.choice(["Active", "Active", "Completed", "Defaulted"])
+            })
+
+        num_tickets = random.randint(1, 5)
+        for t in range(num_tickets):
+            support_tickets_to_insert.append({
+                "ticket_id": f"TKT{i:04d}{t:02d}",
+                "customer_id": customer_id,
+                "category": random.choice(["Billing", "Technical", "Account", "General"]),
+                "status": random.choice(["Open", "Resolved", "Closed"]),
+                "resolution_time_hours": round(random.uniform(0.5, 72.0), 2) if random.choice([True, False]) else None
+            })
+
+        portfolios_to_insert.append({
+            "portfolio_id": f"PORT{i:04d}",
+            "customer_id": customer_id,
+            "asset_type": random.choice(["Stocks", "Bonds", "Real Estate", "Crypto"]),
+            "value": round(random.uniform(1000.0, 100000.0), 2)
+        })
 
     print(f"Inserting {len(customers_to_insert)} customers...")
     errors = client.insert_rows_json(table_customers_id, customers_to_insert)
@@ -164,6 +245,18 @@ def create_mock_data():
         errors = client.insert_rows_json(table_transactions_id, batch)
         if errors: print(f"Errors inserting transactions batch: {errors}")
         
+    print(f"Inserting {len(loans_to_insert)} loans...")
+    errors = client.insert_rows_json(f"{project_id}.{dataset_name}.loans", loans_to_insert)
+    if errors: print(f"Errors inserting loans: {errors}")
+
+    print(f"Inserting {len(support_tickets_to_insert)} support tickets...")
+    errors = client.insert_rows_json(f"{project_id}.{dataset_name}.support_tickets", support_tickets_to_insert)
+    if errors: print(f"Errors inserting support tickets: {errors}")
+
+    print(f"Inserting {len(portfolios_to_insert)} portfolios...")
+    errors = client.insert_rows_json(f"{project_id}.{dataset_name}.portfolios", portfolios_to_insert)
+    if errors: print(f"Errors inserting portfolios: {errors}")
+
     print("Mock data creation complete!")
 
 if __name__ == "__main__":

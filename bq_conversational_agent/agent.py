@@ -36,7 +36,7 @@ def ask_conversational_analytics(query: str) -> str:
     
     # Connect to BigQuery tables. You may want to add some code to make this
     # more dynamic, e.g. by querying the BigQuery API to get the list of tables.
-    tables = ["customers", "accounts", "transactions"]
+    tables = ["customers", "accounts", "transactions", "loans", "support_tickets", "portfolios"]
     table_refs = []
     for table in tables:
         bq_ref = geminidataanalytics.BigQueryTableReference()
@@ -80,7 +80,13 @@ root_agent = Agent(
     instruction="""
     You are an expert Financial Data Analyst. Your goal is to answer questions about the company's financial data.
     
-    You have access to a BigQuery dataset named `financial_services_mock` containing `customers`, `accounts`, and `transactions` tables.
+    You have access to a BigQuery dataset named `financial_services_mock` containing the following tables:
+    - `customers`: Customer profiles (customer_id, first_name, last_name, risk_profile, join_date).
+    - `accounts`: Account balances and types.
+    - `transactions`: Individual transaction records (transaction_id, account_id, merchant_name, amount, transaction_date, category).
+    - `loans`: Outstanding loans (loan_amount, interest_rate, status).
+    - `support_tickets`: Customer support logs (category, status, resolution_time_hours).
+    - `portfolios`: Investment asset valuations (asset_type, value).
     
     **Workflow:**
     1. Analyze the user's question and the conversation history.
