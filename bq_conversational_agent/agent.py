@@ -5,6 +5,7 @@ from vertexai import agent_engines
 import vertexai
 import google.cloud.geminidataanalytics as geminidataanalytics
 from dotenv import load_dotenv
+from google.oauth2.credentials import Credentials
 
 # Load environment variables from .env file
 load_dotenv()
@@ -19,19 +20,30 @@ if not project_id:
 
 vertexai.init(project=project_id, location=location)
 
-def ask_conversational_analytics(query: str) -> str:
+def ask_conversational_analytics(query: str, tool_context=None) -> str:
     """
     Asks a standalone question about the financial data using the Conversational Analytics API.
     
     Args:
         query: The natural language question to ask. MUST be a standalone question with all necessary context.
+        tool_context: Optional context passed by ADK containing user state (OAuth tokens).
         
     Returns:
         The answer from the Conversational Analytics API.
     """
     print(f"DEBUG: ask_conversational_analytics called with query='{query}'")
     
-    client = geminidataanalytics.DataChatServiceClient()
+    access_token = None
+    if tool_context and hasattr(tool_context, "state"):
+        access_token = tool_context.state.get("temp:bq_auth_v2")
+        
+    if not access_token:
+        print("ERROR: No user OAuth token found. Access denied.")
+        return "Authentication Error: You do not have valid credentials to access this agent. Please click 'Authorize' to log in."
+
+    print("DEBUG: Using user OAuth token for BigQuery access.")
+    creds = Credentials(access_token)
+    client = geminidataanalytics.DataChatServiceClient(credentials=creds)
     inline_context = geminidataanalytics.Context()
     
     # Connect to BigQuery tables. You may want to add some code to make this

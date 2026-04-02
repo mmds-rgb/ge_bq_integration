@@ -36,6 +36,8 @@ def deploy():
                 "google-adk",
                 "google-cloud-aiplatform[adk,agent_engines]",
                 "google-cloud-bigquery",
+                "google-cloud-geminidataanalytics",
+                "python-dotenv",
                 "cloudpickle",
                 "functions-framework",
                 "uvicorn",
