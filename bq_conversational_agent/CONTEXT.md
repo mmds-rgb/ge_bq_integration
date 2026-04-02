@@ -38,6 +38,43 @@ The dataset (`financial_services_mock`) contains 6 core tables representing comm
 
 ---
 
+## 🔐 Security & User ACL Enforcement (OAuth 2.0)
+
+To ensure that the agent respects user-specific Access Control Lists (ACLs) in BigQuery, the system uses **User-Delegated OAuth 2.0**. 
+
+### ⚙️ Configuration in Gemini Enterprise UI
+When registering the Custom Agent via the Gemini Enterprise Admin UI, you must configure the **Authorization** with the following parameters:
+
+*   **Authorization ID**: Use a unique ID (e.g., `bq_auth_v7`).
+*   **Token URI**: `https://oauth2.googleapis.com/token`
+*   **Authorization URI**: (Crucial for Refresh Tokens)
+    ```text
+    https://accounts.google.com/o/oauth2/v2/auth?response_type=code&access_type=offline&prompt=consent&scope=https://www.googleapis.com/auth/bigquery.readonly+https://www.googleapis.com/auth/cloud-platform
+    ```
+
+> [!IMPORTANT]
+> **Why `prompt=consent`?** Google only returns a Refresh Token on the *first* authorization. If the flow fails later, subsequent logins will miss the refresh token, causing a `400 Bad Request` in the Gemini Enterprise backend (`Refresh token not found in response`). Adding `prompt=consent` forces Google to ask for permissions every time, ensuring a refresh token is always generated.
+
+### 🐍 Python Code Implementation (`agent.py`)
+The code reads the token from the `tool_context` (passed by ADK) and initializes the client using those credentials:
+
+```python
+    access_token = None
+    if tool_context and hasattr(tool_context, "state"):
+        access_token = tool_context.state.get("temp:bq_auth_v7") or tool_context.state.get("bq_auth_v7")
+        
+    if not access_token:
+        return "Authentication Error: Please click 'Authorize' to log in."
+        
+    creds = Credentials(access_token)
+    client = geminidataanalytics.DataChatServiceClient(credentials=creds)
+```
+
+> [!CAUTION]
+> If you change the Authorization ID in the UI (e.g., to `bq_auth_v8`), you **must** update the code in `agent.py` to match and run `python deploy.py` again.
+
+---
+
 ## 🧪 Testing & Verification Paradigm
 
 The test suite (`test_agent.py`) verifies accuracy using **Pre-Calculated Static Value Assertions** against known seeds.

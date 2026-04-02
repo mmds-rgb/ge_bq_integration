@@ -35,7 +35,7 @@ def ask_conversational_analytics(query: str, tool_context=None) -> str:
     
     access_token = None
     if tool_context and hasattr(tool_context, "state"):
-        access_token = tool_context.state.get("temp:bq_auth_v2")
+        access_token = tool_context.state.get("temp:bq_auth_v7") or tool_context.state.get("bq_auth_v7")
         
     if not access_token:
         print("ERROR: No user OAuth token found. Access denied.")
